@@ -1,0 +1,26 @@
+# Git
+.git
+.gitignore
+
+# Python virtual environment
+venv/
+venv_marvella/
+.venv/
+__pycache__/
+
+# Docker files (These are not needed inside the image itself)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Database and Backups (These should be handled by volumes, not copied into the image)
+instance/
+backups/
+
+# IDE/Editor specific files
+.vscode/
+.idea/
+
+# OS specific files
+.DS_Store
+Thumbs.db
