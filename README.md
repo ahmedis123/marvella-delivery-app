@@ -44,7 +44,7 @@
 أولاً، قم بنسخ المستودع إلى جهازك:
 
 ```bash
-git clone https://github.com/your-username/marvella-delivery-app.git
+git clone https://github.com/ahmedis123/marvella-delivery-app.git
 cd marvella-delivery-app
 ```
 
