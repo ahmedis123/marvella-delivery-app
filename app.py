@@ -1,4 +1,4 @@
-# app.py (Version 7.0 - Advanced Filtering & Automated Backups)
+# app.py (Version 7.1 - Improved UI & Arabic Invoice)
 
 # =======================================================================
 # | الجزء الأول: إعداد التطبيق والنماذج (Application Setup & Models)      |
@@ -7,6 +7,7 @@
 # --- 1. استيراد المكتبات الأساسية ---
 import os
 import shutil
+import requests
 from datetime import datetime
 from urllib.parse import quote
 from pathlib import Path
@@ -41,20 +42,151 @@ templates = {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Cairo', sans-serif; background-color: #f8f9fa; }
-        .navbar { background-color: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,.1); }
-        .nav-link.active { font-weight: bold; color: #d63384 !important; }
-        .btn-primary { background-color: #d63384; border-color: #d63384; }
-        .btn-primary:hover { background-color: #b02a6c; border-color: #b02a6c; }
-        .table-hover tbody tr:hover { background-color: #f1f1f1; }
-        .spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1060; display: none; justify-content: center; align-items: center; }
-        .status-badge { font-size: 0.9em; }
-        .status-جديد { background-color: #ffc107 !important; color: black; }
-        .status-تم-الشراء { background-color: #0dcaf0 !important; color: white; }
-        .status-في-الطريق { background-color: #fd7e14 !important; color: white; }
-        .status-تم-التسليم { background-color: #198754 !important; color: white; }
-        .payment-لم-يتم-الدفع { background-color: #dc3545 !important; color: white; }
-        .payment-تم-الدفع { background-color: #198754 !important; color: white; }
+        :root {
+            --primary-color: #d63384;
+            --primary-hover: #b02a6c;
+            --secondary-color: #6c757d;
+            --success-color: #198754;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #0dcaf0;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+        
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: #f8f9fa; 
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .navbar { 
+            background-color: #ffffff; 
+            box-shadow: 0 2px 4px rgba(0,0,0,.1); 
+        }
+        
+        .nav-link.active { 
+            font-weight: bold; 
+            color: var(--primary-color) !important; 
+        }
+        
+        .btn-primary { 
+            background-color: var(--primary-color); 
+            border-color: var(--primary-color); 
+        }
+        
+        .btn-primary:hover { 
+            background-color: var(--primary-hover); 
+            border-color: var(--primary-hover); 
+        }
+        
+        .table-hover tbody tr:hover { 
+            background-color: #f1f1f1; 
+        }
+        
+        .spinner-overlay { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background-color: rgba(0,0,0,0.5); 
+            z-index: 1060; 
+            display: none; 
+            justify-content: center; 
+            align-items: center; 
+        }
+        
+        .status-badge { 
+            font-size: 0.9em; 
+            white-space: nowrap;
+        }
+        
+        .status-جديد { 
+            background-color: var(--warning-color) !important; 
+            color: black; 
+        }
+        
+        .status-تم-الشراء { 
+            background-color: var(--info-color) !important; 
+            color: white; 
+        }
+        
+        .status-في-الطريق { 
+            background-color: #fd7e14 !important; 
+            color: white; 
+        }
+        
+        .status-تم-التسليم { 
+            background-color: var(--success-color) !important; 
+            color: white; 
+        }
+        
+        .payment-لم-يتم-الدفع { 
+            background-color: var(--danger-color) !important; 
+            color: white; 
+        }
+        
+        .payment-تم-الدفع { 
+            background-color: var(--success-color) !important; 
+            color: white; 
+        }
+        
+        /* تحسينات للهواتف */
+        @media (max-width: 768px) {
+            .container {
+                padding-left: 15px;
+                padding-right: 15px;
+            }
+            
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .navbar-brand {
+                font-size: 1.1rem;
+            }
+            
+            .btn {
+                padding: 0.375rem 0.75rem;
+                font-size: 0.875rem;
+            }
+            
+            .card {
+                margin-bottom: 1rem;
+            }
+        }
+        
+        /* تحسينات للتطبع والطباعة */
+        @media print {
+            .navbar, .btn, .dropdown, .spinner-overlay {
+                display: none !important;
+            }
+            
+            body {
+                background-color: white;
+                font-size: 12pt;
+            }
+            
+            .container {
+                width: 100%;
+                max-width: 100%;
+            }
+        }
+        
+        main {
+            flex: 1;
+        }
+        
+        footer {
+            background-color: var(--dark-color);
+            color: white;
+            padding: 1rem 0;
+            margin-top: auto;
+        }
     </style>
 </head>
 <body>
@@ -82,11 +214,31 @@ templates = {
         {% endwith %}
         {% block content %}{% endblock %}
     </main>
+    <footer class="mt-5">
+        <div class="container text-center">
+            <p class="mb-0">مارفيلا &copy; 2023. جميع الحقوق محفوظة.</p>
+        </div>
+    </footer>
     <div class="spinner-overlay" id="spinner-overlay"><div class="spinner-border text-light" role="status"><span class="visually-hidden">Loading...</span></div></div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function showSpinner() { document.getElementById('spinner-overlay').style.display = 'flex'; }
         function hideSpinner() { document.getElementById('spinner-overlay').style.display = 'none'; }
+        
+        // دالة للتحقق من توافق المتصفح
+        function checkBrowserCompatibility() {
+            var isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+            var isSafari = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
+            var isFirefox = /Firefox/.test(navigator.userAgent);
+            var isEdge = /Edg/.test(navigator.userAgent);
+            
+            if (!isChrome && !isSafari && !isFirefox && !isEdge) {
+                console.log("This browser is not fully supported. For best experience, use Chrome, Safari, Firefox or Edge.");
+            }
+        }
+        
+        // تشغيل فحص التوافق عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', checkBrowserCompatibility);
     </script>
     {% block scripts %}{% endblock %}
 </body>
@@ -124,20 +276,20 @@ templates = {
 {% extends "layout.html" %}
 {% block title %}إدارة الطلبات{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
     <h2>إدارة الطلبات</h2>
-    <a href="{{ url_for('add_order') }}" class="btn btn-primary"><i class="bi bi-plus-circle-fill me-2"></i>إضافة طلب جديد</a>
+    <a href="{{ url_for('add_order') }}" class="btn btn-primary mt-2 mt-md-0"><i class="bi bi-plus-circle-fill me-2"></i>إضافة طلب جديد</a>
 </div>
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" action="{{ url_for('dashboard') }}" class="row g-3 align-items-center">
-            <div class="col-md-5">
+            <div class="col-12 col-md-5">
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
                     <input type="text" class="form-control" name="search_term" placeholder="ابحث بالاسم، الهاتف، أو رقم الطلب..." value="{{ request.args.get('search_term', '') }}">
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-6 col-md-3">
                 <select name="order_status" class="form-select">
                     <option value="">كل حالات الطلب</option>
                     {% set statuses = ['جديد', 'تم الشراء', 'في الطريق', 'تم التسليم'] %}
@@ -146,14 +298,14 @@ templates = {
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-6 col-md-3">
                 <select name="payment_status" class="form-select">
                     <option value="">كل حالات الدفع</option>
                     <option value="لم يتم الدفع" {% if request.args.get('payment_status') == 'لم يتم الدفع' %}selected{% endif %}>لم يتم الدفع</option>
                     <option value="تم الدفع" {% if request.args.get('payment_status') == 'تم الدفع' %}selected{% endif %}>تم الدفع</option>
                 </select>
             </div>
-            <div class="col-md-1">
+            <div class="col-12 col-md-1">
                 <button type="submit" class="btn btn-info w-100">فلترة</button>
             </div>
         </form>
@@ -183,6 +335,7 @@ templates = {
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">إجراءات</button>
                                 <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" onclick="previewInvoice({{ order.id }})"><i class="bi bi-eye me-2"></i>معاينة الفاتورة</a></li>
                                     <li><a class="dropdown-item" href="{{ url_for('download_invoice_pdf', order_id=order.id) }}"><i class="bi bi-file-earmark-pdf me-2"></i>تحميل PDF</a></li>
                                     <li><a class="dropdown-item" href="{{ url_for('edit_order', order_id=order.id) }}"><i class="bi bi-pencil-square me-2"></i>تعديل</a></li>
                                 </ul>
@@ -197,6 +350,13 @@ templates = {
         </div>
     </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+function previewInvoice(orderId) {
+    window.open(`/invoice/preview/${orderId}`, '_blank');
+}
+</script>
 {% endblock %}
 """,
     "order_form.html": """
@@ -225,11 +385,11 @@ templates = {
         </div>
     </div>
     <div class="card mt-4">
-        <div class="card-header d-flex justify-content-between align-items-center"><span>المنتجات</span><button type="button" class="btn btn-sm btn-success" id="addProductBtn"><i class="bi bi-plus"></i> إضافة منتج</button></div>
-        <div class="card-body"><div id="productsContainer">{% if order and order.products %}{% for product in order.products %}<div class="row product-row mb-2 align-items-center"><div class="col-md-7"><input type="text" name="product_description" class="form-control" placeholder="وصف المنتج" value="{{ product.description }}" required></div><div class="col-md-3"><input type="number" name="product_price" class="form-control" placeholder="السعر (ج.س)" step="0.01" value="{{ product.price }}" required></div><div class="col-md-2"><button type="button" class="btn btn-outline-danger remove-product">حذف</button></div></div>{% endfor %}{% endif %}</div></div>
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap"><span>المنتجات</span><button type="button" class="btn btn-sm btn-success mt-2 mt-md-0" id="addProductBtn"><i class="bi bi-plus"></i> إضافة منتج</button></div>
+        <div class="card-body"><div id="productsContainer">{% if order and order.products %}{% for product in order.products %}<div class="row product-row mb-2 align-items-center"><div class="col-12 col-md-7 mb-2 mb-md-0"><input type="text" name="product_description" class="form-control" placeholder="وصف المنتج" value="{{ product.description }}" required></div><div class="col-7 col-md-3 mb-2 mb-md-0"><input type="number" name="product_price" class="form-control" placeholder="السعر (ج.س)" step="0.01" value="{{ product.price }}" required></div><div class="col-5 col-md-2"><button type="button" class="btn btn-outline-danger w-100 remove-product">حذف</button></div></div>{% endfor %}{% endif %}</div></div>
         <div class="card-footer bg-white"><div class="d-flex justify-content-end align-items-center"><h4 class="me-3 mb-0">الإجمالي:</h4><h4 id="total-display" class="fw-bold text-primary mb-0">0.00 ج.س</h4></div></div>
     </div>
-    <div class="mt-4"><button type="submit" class="btn btn-primary px-4">{{ 'حفظ التعديلات' if order else 'إنشاء الطلب' }}</button><a href="{{ url_for('dashboard') }}" class="btn btn-secondary">إلغاء</a>{% if order %}<a href="{{ url_for('delete_order', order_id=order.id) }}" class="btn btn-danger float-end" onclick="return confirm('هل أنت متأكد من حذف هذا الطلب وكل منتجاته؟')"><i class="bi bi-trash me-2"></i>حذف الطلب</a>{% endif %}</div>
+    <div class="mt-4"><button type="submit" class="btn btn-primary px-4">{{ 'حفظ التعديلات' if order else 'إنشاء الطلب' }}</button><a href="{{ url_for('dashboard') }}" class="btn btn-secondary ms-2">إلغاء</a>{% if order %}<a href="{{ url_for('delete_order', order_id=order.id) }}" class="btn btn-danger float-end" onclick="return confirm('هل أنت متأكد من حذف هذا الطلب وكل منتجاته؟')"><i class="bi bi-trash me-2"></i>حذف الطلب</a>{% endif %}</div>
 </form>
 {% endblock %}
 {% block scripts %}
@@ -254,7 +414,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function addProductRow(desc = '', price = '') {
         const productRow = document.createElement('div');
         productRow.className = 'row product-row mb-2 align-items-center';
-        productRow.innerHTML = `<div class="col-md-7"><input type="text" name="product_description" class="form-control" placeholder="وصف المنتج" value="${desc}" required></div><div class="col-md-3"><input type="number" name="product_price" class="form-control" placeholder="السعر (ج.س)" step="0.01" value="${price}" required></div><div class="col-md-2"><button type="button" class="btn btn-outline-danger remove-product">حذف</button></div>`;
+        productRow.innerHTML = `<div class="col-12 col-md-7 mb-2 mb-md-0"><input type="text" name="product_description" class="form-control" placeholder="وصف المنتج" value="${desc}" required></div><div class="col-7 col-md-3 mb-2 mb-md-0"><input type="number" name="product_price" class="form-control" placeholder="السعر (ج.س)" step="0.01" value="${price}" required></div><div class="col-5 col-md-2"><button type="button" class="btn btn-outline-danger w-100 remove-product">حذف</button></div>`;
         productsContainer.appendChild(productRow);
     }
 
@@ -282,6 +442,11 @@ document.addEventListener('DOMContentLoaded', function() {
     .bg-orders { background: linear-gradient(45deg, #17a2b8, #138496); }
     .bg-completed { background: linear-gradient(45deg, #007bff, #0069d9); }
     .bg-avg { background: linear-gradient(45deg, #fd7e14, #e36a02); }
+    
+    @media (max-width: 768px) {
+        .stat-card h3 { font-size: 2rem; }
+        .stat-card p { font-size: 1rem; }
+    }
 </style>
 <h2 class="mb-4">نظرة عامة على الأداء</h2>
 <div class="row">
@@ -303,8 +468,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="row mt-4">
     <div class="col-md-8">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h4><i class="bi bi-database-down me-2"></i>النسخ الاحتياطية الحالية</h4>
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
+                <h4 class="mb-2 mb-md-0"><i class="bi bi-database-down me-2"></i>النسخ الاحتياطية الحالية</h4>
                 <a href="{{ url_for('create_backup') }}" class="btn btn-primary" onclick="showSpinner()"><i class="bi bi-plus-circle me-2"></i>إنشاء نسخة جديدة</a>
             </div>
             <div class="card-body">
@@ -359,180 +524,268 @@ document.addEventListener('DOMContentLoaded', function() {
     <meta charset="UTF-8">
     <title>فاتورة طلب #{{ order.id }}</title>
     <style>
-        @font-face {
-            font-family: 'Cairo';
-            src: url('{{ cairo_regular_path }}');
-            font-weight: normal;
-        }
-        @font-face {
-            font-family: 'Cairo';
-            src: url('{{ cairo_bold_path }}');
-            font-weight: bold;
-        }
+        /* تضمين خطوط عربية من Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap');
+        
         body { 
-            font-family: 'Cairo', sans-serif; 
-            direction: rtl; 
-            font-size: 14px;
+            font-family: 'Cairo', sans-serif;
+            margin: 0;
+            padding: 0;
             color: #333;
+            line-height: 1.6;
+            background-color: #fff;
         }
+        
         .invoice-container {
-            padding: 40px;
+            width: 100%;
             max-width: 800px;
-            margin: auto;
-            background: #fff;
+            margin: 0 auto;
+            padding: 25px;
+            box-sizing: border-box;
         }
+        
         .header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 40px;
-            border-bottom: 2px solid #eee;
+            margin-bottom: 30px;
             padding-bottom: 20px;
+            border-bottom: 2px solid #d63384;
         }
-        .header .logo {
+        
+        .logo-container {
+            flex: 1;
+        }
+        
+        .logo {
             max-width: 120px;
+            height: auto;
         }
-        .header .invoice-details {
+        
+        .invoice-info {
+            flex: 1;
             text-align: left;
         }
-        .header h1 {
-            margin: 0;
-            font-size: 32px;
-            color: #333;
+        
+        .invoice-info h1 {
+            color: #d63384;
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            font-weight: 700;
         }
-        .header p {
-            margin: 2px 0;
-            color: #777;
+        
+        .invoice-info p {
+            margin: 5px 0;
+            font-size: 16px;
         }
-        .customer-info {
+        
+        .customer-details {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
+            gap: 20px;
         }
-        .customer-info div {
-            width: 48%;
+        
+        .bill-to, .payment-info {
+            flex: 1;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #eee;
         }
-        .customer-info h4 {
-            margin-bottom: 10px;
+        
+        .bill-to h3, .payment-info h3 {
             color: #d63384;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 5px;
+            margin-top: 0;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #ddd;
+            font-size: 18px;
+            font-weight: 600;
         }
-        .customer-info p {
-            margin: 4px 0;
+        
+        .bill-to p, .payment-info p {
+            margin: 8px 0;
         }
+        
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 30px;
+            margin: 25px 0;
         }
-        .items-table thead {
-            background-color: #f9f9f9;
-            border-bottom: 2px solid #d63384;
-        }
+        
         .items-table th {
-            padding: 12px;
+            background-color: #d63384;
+            color: white;
+            padding: 12px 15px;
             text-align: right;
-            font-weight: bold;
+            font-weight: 600;
         }
+        
         .items-table td {
-            padding: 12px;
-            border-bottom: 1px solid #eee;
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
         }
-        .items-table tbody tr:last-child td {
-            border-bottom: none;
+        
+        .items-table tr:nth-child(even) {
+            background-color: #f9f9f9;
         }
-        .totals {
-            width: 100%;
+        
+        .text-left {
             text-align: left;
         }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .totals {
+            width: 100%;
+            margin-top: 25px;
+        }
+        
         .totals table {
             width: 50%;
             margin-left: 50%;
             border-collapse: collapse;
         }
+        
         .totals td {
-            padding: 10px;
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
         }
-        .totals .total-row td {
-            border-top: 2px solid #333;
-            font-weight: bold;
+        
+        .totals tr:last-child td {
+            border-bottom: none;
+            font-weight: 700;
             font-size: 18px;
+            color: #d63384;
         }
+        
         .footer {
             text-align: center;
-            margin-top: 50px;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
             color: #777;
-            font-size: 12px;
+            font-size: 14px;
+        }
+        
+        .thank-you {
+            font-size: 16px;
+            color: #d63384;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .decoration {
+            text-align: center;
+            margin: 20px 0;
+            color: #d63384;
+            font-size: 24px;
+        }
+        
+        /* تحسينات للطباعة */
+        @media print {
+            body {
+                font-size: 12pt;
+            }
+            
+            .invoice-container {
+                padding: 0;
+                max-width: 100%;
+            }
+            
+            .header {
+                margin-bottom: 20px;
+            }
+            
+            .customer-details {
+                margin-bottom: 20px;
+            }
+            
+            .items-table {
+                margin: 15px 0;
+            }
+            
+            .items-table th, .items-table td {
+                padding: 8px 10px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="invoice-container">
         <div class="header">
-            <div>
-                <img src="{{ logo_path }}" alt="شعار الشركة" class="logo">
+            <div class="logo-container">
+                <img src="{{ logo_path }}" alt="شعار مارفيلا" class="logo">
             </div>
-            <div class="invoice-details">
+            <div class="invoice-info">
                 <h1>فاتورة</h1>
-                <p>رقم: #{{ order.id }}</p>
-                <p>التاريخ: {{ order.created_at.strftime('%Y-%m-%d') }}</p>
+                <p><strong>رقم:</strong> #{{ order.id }}</p>
+                <p><strong>التاريخ:</strong> {{ order.created_at.strftime('%Y-%m-%d') }}</p>
             </div>
         </div>
-
-        <div class="customer-info">
-            <div>
-                <h4>فاتورة إلى:</h4>
-                <p>{{ order.customer_name }}</p>
-                <p>{{ order.customer_phone }}</p>
-                <p>{{ order.destination_city }}</p>
+        
+        <div class="decoration">✦</div>
+        
+        <div class="customer-details">
+            <div class="bill-to">
+                <h3>فاتورة إلى:</h3>
+                <p><strong>الاسم:</strong> {{ order.customer_name }}</p>
+                <p><strong>الهاتف:</strong> {{ order.customer_phone }}</p>
+                <p><strong>المدينة:</strong> {{ order.destination_city }}</p>
             </div>
-            <div>
-                <h4>معلومات الدفع:</h4>
+            
+            <div class="payment-info">
+                <h3>معلومات الدفع:</h3>
                 <p><strong>حالة الدفع:</strong> {{ order.payment_status }}</p>
                 <p><strong>حالة الطلب:</strong> {{ order.order_status }}</p>
             </div>
         </div>
-
+        
         <table class="items-table">
             <thead>
                 <tr>
-                    <th>وصف المنتج</th>
-                    <th style="text-align:center;">الكمية</th>
-                    <th style="text-align:left;">السعر</th>
+                    <th class="text-right">وصف المنتج</th>
+                    <th class="text-center">الكمية</th>
+                    <th class="text-left">السعر (ج.س)</th>
                 </tr>
             </thead>
             <tbody>
                 {% for product in order.products %}
                 <tr>
-                    <td>{{ product.description }}</td>
-                    <td style="text-align:center;">1</td>
-                    <td style="text-align:left;">{{ "%.2f"|format(product.price) }} ج.س</td>
+                    <td class="text-right">{{ product.description }}</td>
+                    <td class="text-center">1</td>
+                    <td class="text-left">{{ "{:,.2f}".format(product.price) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-
+        
         <div class="totals">
             <table>
                 <tr>
-                    <td>مجموع المنتجات:</td>
-                    <td style="text-align:left;">{{ "%.2f"|format(order.products_cost) }} ج.س</td>
+                    <td class="text-right">مجموع المنتجات:</td>
+                    <td class="text-left">{{ "{:,.2f}".format(order.products_cost) }} ج.س</td>
                 </tr>
                 <tr>
-                    <td>تكلفة الشحن:</td>
-                    <td style="text-align:left;">{{ "%.2f"|format(order.shipping_cost) }} ج.س</td>
+                    <td class="text-right">تكلفة الشحن:</td>
+                    <td class="text-left">{{ "{:,.2f}".format(order.shipping_cost) }} ج.س</td>
                 </tr>
-                <tr class="total-row">
-                    <td>الإجمالي:</td>
-                    <td style="text-align:left;">{{ "%.2f"|format(order.total_cost) }} ج.س</td>
+                <tr>
+                    <td class="text-right">الإجمالي:</td>
+                    <td class="text-left">{{ "{:,.2f}".format(order.total_cost) }} ج.س</td>
                 </tr>
             </table>
         </div>
-
-        <div class="footer">
-            <p>شكراً لتعاملكم معنا!</p>
-            <p>Marvella Fashion</p>
+	<div class="footer">
+            <div class="thank-you">شكراً لتعاملكم معنا</div>
+            <p>الهاتف : 00249960856096 </p>
         </div>
     </div>
 </body>
@@ -552,8 +805,6 @@ app.jinja_loader = DictLoader(templates)
 app.config['SECRET_KEY'] = 'a-very-secret-key-for-v7.0'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + DB_PATH
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# ... استكمالاً للكود السابق من الإجابة الماضية
-
 app.config['SCHEDULER_API_ENABLED'] = True
 
 os.makedirs(os.path.join(basedir, 'instance'), exist_ok=True)
@@ -743,24 +994,58 @@ def statistics():
     }
     return render_template('statistics.html', stats=stats)
 
+def ensure_cairo_font():
+    static_dir = Path(app.static_folder)
+    cairo_font_path = static_dir / 'Cairo-Regular.ttf'
+    
+    if not cairo_font_path.exists():
+        try:
+            cairo_font_url = "https://github.com/google/fonts/raw/main/ofl/cairo/Cairo-Regular.ttf"
+            response = requests.get(cairo_font_url)
+            with open(cairo_font_path, 'wb') as f:
+                f.write(response.content)
+            print("تم تحميل خط Cairo بنجاح")
+        except Exception as e:
+            print(f"خطأ في تحميل الخط: {e}")
+
+@app.route('/invoice/preview/<int:order_id>')
+@login_required
+def preview_invoice(order_id):
+    order = Order.query.get_or_404(order_id)
+    
+    return render_template(
+        'invoice_pdf_template.html', 
+        order=order, 
+        logo_path=url_for('static', filename='logo.png'),
+        cairo_regular_path=url_for('static', filename='Cairo-Regular.ttf')
+    )
+
 @app.route('/invoice/download/<int:order_id>')
 @login_required
 def download_invoice_pdf(order_id):
     order = Order.query.get_or_404(order_id)
     
-    logo_uri = (Path(app.static_folder) / 'logo.png').as_uri()
-    cairo_regular_uri = (Path(app.static_folder) / 'Cairo-Regular.ttf').as_uri()
-    cairo_bold_uri = (Path(app.static_folder) / 'Cairo-Bold.ttf').as_uri()
+    # التأكد من وجود ملف الخطوط
+    ensure_cairo_font()
+    
+    # استخدام مسارات مطلقة للخطوط والصور
+    static_dir = Path(app.static_folder)
+    logo_path = static_dir / 'logo.png'
+    cairo_font_path = static_dir / 'Cairo-Regular.ttf'
+    
+    # استخدام مسارات ملفات محلية بدلاً من URIs
+    logo_uri = logo_path.as_uri() if logo_path.exists() else ""
+    cairo_regular_uri = cairo_font_path.as_uri() if cairo_font_path.exists() else ""
     
     rendered_html = render_template(
         'invoice_pdf_template.html', 
         order=order, 
         logo_path=logo_uri,
-        cairo_regular_path=cairo_regular_uri,
-        cairo_bold_path=cairo_bold_uri
+        cairo_regular_path=cairo_regular_uri
     )
     
     try:
+        # إعداد خيارات PDF للغة العربية
         html = HTML(string=rendered_html)
         pdf_file = html.write_pdf()
         
@@ -884,4 +1169,3 @@ if __name__ == '__main__':
             print("Default admin user created with username 'admin' and password 'admin_password'")
     
     app.run(debug=True, host='0.0.0.0')
-
