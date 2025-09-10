@@ -785,7 +785,8 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
 	<div class="footer">
             <div class="thank-you">شكراً لتعاملكم معنا</div>
-            <p>الهاتف : 00249960856096 </p>
+            <p>Marvella Fashion </p>
+			<p>الهاتف : 00249960856096 </p>
         </div>
     </div>
 </body>
