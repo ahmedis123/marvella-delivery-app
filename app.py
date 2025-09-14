@@ -1,4 +1,4 @@
-# app.py (Version 7.1 - Improved UI & Arabic Invoice)
+# app.py (Version 7.3 - Enhanced UI with Requested Changes)
 
 # =======================================================================
 # | الجزء الأول: إعداد التطبيق والنماذج (Application Setup & Models)      |
@@ -40,7 +40,7 @@ templates = {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary-color: #d63384;
@@ -83,7 +83,8 @@ templates = {
         }
         
         .table-hover tbody tr:hover { 
-            background-color: #f1f1f1; 
+            background-color: #f8f9fa; 
+            transition: background-color 0.2s ease;
         }
         
         .spinner-overlay { 
@@ -134,6 +135,86 @@ templates = {
             color: white; 
         }
         
+        /* تحسينات عامة للواجهة */
+        .card {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn {
+            border-radius: 8px;
+            font-weight: 600;
+            padding: 0.5rem 1.5rem;
+            transition: all 0.2s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+        
+        .table {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .table th {
+            background-color: #d63384;
+            color: white;
+            font-weight: 600;
+            padding: 12px 15px;
+        }
+        
+        .table td {
+            padding: 12px 15px;
+            vertical-align: middle;
+        }
+        
+        .form-control, .form-select {
+            border-radius: 8px;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: #d63384;
+            box-shadow: 0 0 0 0.2rem rgba(214, 51, 132, 0.25);
+        }
+        
+        .alert {
+            border-radius: 8px;
+            border: none;
+            padding: 15px 20px;
+        }
+        
+        .dropdown-menu {
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        
+        .dropdown-item {
+            padding: 10px 15px;
+            transition: all 0.2s ease;
+        }
+        
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .currency {
+            font-family: 'Cairo', sans-serif;
+            direction: ltr;
+            display: inline-block;
+            font-weight: 600;
+        }
+        
         /* تحسينات للهواتف */
         @media (max-width: 768px) {
             .container {
@@ -144,6 +225,7 @@ templates = {
             .table-responsive {
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
+                border-radius: 8px;
             }
             
             .navbar-brand {
@@ -153,10 +235,17 @@ templates = {
             .btn {
                 padding: 0.375rem 0.75rem;
                 font-size: 0.875rem;
+                width: 100%;
+                margin-bottom: 10px;
             }
             
             .card {
                 margin-bottom: 1rem;
+            }
+            
+            .dropdown-menu {
+                position: static !important;
+                transform: none !important;
             }
         }
         
@@ -216,7 +305,7 @@ templates = {
     </main>
     <footer class="mt-5">
         <div class="container text-center">
-            <p class="mb-0">مارفيلا &copy; 2023. جميع الحقوق محفوظة.</p>
+            <p class="mb-0">مارفيلا &copy; 2025. جميع الحقوق محفوظة.</p>
         </div>
     </footer>
     <div class="spinner-overlay" id="spinner-overlay"><div class="spinner-border text-light" role="status"><span class="visually-hidden">Loading...</span></div></div>
@@ -282,14 +371,14 @@ templates = {
 </div>
 <div class="card mb-4">
     <div class="card-body">
-        <form method="GET" action="{{ url_for('dashboard') }}" class="row g-3 align-items-center">
-            <div class="col-12 col-md-5">
+        <form method="GET" action="{{ url_for('dashboard') }}" class="row g-2 align-items-center">
+            <div class="col-12 col-md-4">
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
                     <input type="text" class="form-control" name="search_term" placeholder="ابحث بالاسم، الهاتف، أو رقم الطلب..." value="{{ request.args.get('search_term', '') }}">
                 </div>
             </div>
-            <div class="col-6 col-md-3">
+            <div class="col-6 col-md-2">
                 <select name="order_status" class="form-select">
                     <option value="">كل حالات الطلب</option>
                     {% set statuses = ['جديد', 'تم الشراء', 'في الطريق', 'تم التسليم'] %}
@@ -298,15 +387,18 @@ templates = {
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-6 col-md-3">
+            <div class="col-6 col-md-2">
                 <select name="payment_status" class="form-select">
                     <option value="">كل حالات الدفع</option>
                     <option value="لم يتم الدفع" {% if request.args.get('payment_status') == 'لم يتم الدفع' %}selected{% endif %}>لم يتم الدفع</option>
                     <option value="تم الدفع" {% if request.args.get('payment_status') == 'تم الدفع' %}selected{% endif %}>تم الدفع</option>
                 </select>
             </div>
-            <div class="col-12 col-md-1">
+            <div class="col-12 col-md-2">
                 <button type="submit" class="btn btn-info w-100">فلترة</button>
+            </div>
+            <div class="col-12 col-md-2">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary w-100">إعادة تعيين</a>
             </div>
         </form>
     </div>
@@ -327,7 +419,7 @@ templates = {
                         <td>{{ order.id }}</td>
                         <td>{{ order.customer_name }}<br><small class="text-muted">{{ order.customer_phone }}</small></td>
                         <td>{{ order.destination_city }}</td>
-                        <td>{{ "%.2f"|format(order.total_cost) }} ج.س</td>
+                        <td><span class="currency">{{ "{:,.2f}".format(order.total_cost) }}</span> ج.س</td>
                         <td><span class="badge rounded-pill status-badge status-{{ order.order_status.replace(' ', '-') }}">{{ order.order_status }}</span></td>
                         <td><span class="badge rounded-pill status-badge payment-{{ order.payment_status.replace(' ', '-') }}">{{ order.payment_status }}</span></td>
                         <td>{{ order.created_at.strftime('%Y-%m-%d') }}</td>
@@ -376,20 +468,52 @@ function previewInvoice(orderId) {
                 <div class="col-md-6 mb-3"><label for="destination_city" class="form-label">مدينة التوصيل</label><input type="text" class="form-control" id="destination_city" name="destination_city" value="{{ order.destination_city if order else '' }}" required></div>
                 <div class="col-md-6 mb-3"><label for="shipping_cost" class="form-label">تكلفة الشحن (جنيه سوداني)</label><input type="number" step="0.01" class="form-control" id="shipping_cost" name="shipping_cost" value="{{ order.shipping_cost if order else 0.0 }}" required></div>
             </div>
-            {% if order %}
             <div class="row">
-                <div class="col-md-6 mb-3"><label for="order_status" class="form-label">حالة الطلب</label><select class="form-select" id="order_status" name="order_status">{% set statuses = ['جديد', 'تم الشراء', 'في الطريق', 'تم التسليم'] %}{% for status in statuses %}<option value="{{ status }}" {% if order.order_status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}</select></div>
-                <div class="col-md-6 mb-3"><label for="payment_status" class="form-label">حالة الدفع</label><select class="form-select" id="payment_status" name="payment_status"><option value="لم يتم الدفع" {% if order.payment_status == 'لم يتم الدفع' %}selected{% endif %}>لم يتم الدفع</option><option value="تم الدفع" {% if order.payment_status == 'تم الدفع' %}selected{% endif %}>تم الدفع</option></select></div>
+                <div class="col-md-6 mb-3"><label for="order_status" class="form-label">حالة الطلب</label><select class="form-select" id="order_status" name="order_status">{% set statuses = ['جديد', 'تم الشراء', 'في الطريق', 'تم التسليم'] %}{% for status in statuses %}<option value="{{ status }}" {% if order and order.order_status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}</select></div>
+                <div class="col-md-6 mb-3"><label for="payment_status" class="form-label">حالة الدفع</label><select class="form-select" id="payment_status" name="payment_status"><option value="لم يتم الدفع" {% if order and order.payment_status == 'لم يتم الدفع' %}selected{% endif %}>لم يتم الدفع</option><option value="تم الدفع" {% if order and order.payment_status == 'تم الدفع' %}selected{% endif %}>تم الدفع</option></select></div>
             </div>
-            {% endif %}
         </div>
     </div>
     <div class="card mt-4">
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap"><span>المنتجات</span><button type="button" class="btn btn-sm btn-success mt-2 mt-md-0" id="addProductBtn"><i class="bi bi-plus"></i> إضافة منتج</button></div>
-        <div class="card-body"><div id="productsContainer">{% if order and order.products %}{% for product in order.products %}<div class="row product-row mb-2 align-items-center"><div class="col-12 col-md-7 mb-2 mb-md-0"><input type="text" name="product_description" class="form-control" placeholder="وصف المنتج" value="{{ product.description }}" required></div><div class="col-7 col-md-3 mb-2 mb-md-0"><input type="number" name="product_price" class="form-control" placeholder="السعر (ج.س)" step="0.01" value="{{ product.price }}" required></div><div class="col-5 col-md-2"><button type="button" class="btn btn-outline-danger w-100 remove-product">حذف</button></div></div>{% endfor %}{% endif %}</div></div>
-        <div class="card-footer bg-white"><div class="d-flex justify-content-end align-items-center"><h4 class="me-3 mb-0">الإجمالي:</h4><h4 id="total-display" class="fw-bold text-primary mb-0">0.00 ج.س</h4></div></div>
+        <div class="card-body">
+            <div id="productsContainer">
+                {% if order and order.products %}
+                {% for product in order.products %}
+                <div class="row product-row mb-3 align-items-center">
+                    <div class="col-12 col-md-4 mb-2 mb-md-0">
+                        <input type="text" name="product_name" class="form-control" placeholder="اسم المنتج" value="{{ product.description }}" required>
+                    </div>
+                    <div class="col-6 col-md-2 mb-2 mb-md-0">
+                        <input type="number" name="product_quantity" class="form-control product-quantity" placeholder="الكمية" min="1" value="{{ product.quantity if product.quantity else 1 }}" required>
+                    </div>
+                    <div class="col-6 col-md-3 mb-2 mb-md-0">
+                        <input type="number" name="product_price" class="form-control product-price" placeholder="السعر (ج.س)" step="0.01" value="{{ product.price }}" required>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <button type="button" class="btn btn-outline-danger w-100 remove-product"><i class="bi bi-trash"></i> حذف</button>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-footer bg-white">
+            <div class="d-flex justify-content-end align-items-center">
+                <h4 class="me-3 mb-0">الإجمالي:</h4>
+                <h4 id="total-display" class="fw-bold text-primary mb-0">0.00 ج.س</h4>
+            </div>
+        </div>
     </div>
-    <div class="mt-4"><button type="submit" class="btn btn-primary px-4">{{ 'حفظ التعديلات' if order else 'إنشاء الطلب' }}</button><a href="{{ url_for('dashboard') }}" class="btn btn-secondary ms-2">إلغاء</a>{% if order %}<a href="{{ url_for('delete_order', order_id=order.id) }}" class="btn btn-danger float-end" onclick="return confirm('هل أنت متأكد من حذف هذا الطلب وكل منتجاته؟')"><i class="bi bi-trash me-2"></i>حذف الطلب</a>{% endif %}</div>
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary px-4">{{ 'حفظ التعديلات' if order else 'إنشاء الطلب' }}</button>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary ms-2">إلغاء</a>
+        {% if order %}
+        <a href="{{ url_for('delete_order', order_id=order.id) }}" class="btn btn-danger float-end" onclick="return confirm('هل أنت متأكد من حذف هذا الطلب وكل منتجاته؟')">
+            <i class="bi bi-trash me-2"></i>حذف الطلب
+        </a>
+        {% endif %}
+    </div>
 </form>
 {% endblock %}
 {% block scripts %}
@@ -400,30 +524,77 @@ document.addEventListener('DOMContentLoaded', function() {
     const shippingCostInput = document.getElementById('shipping_cost');
     const totalDisplay = document.getElementById('total-display');
 
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('ar-SD', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(amount);
+    }
+
     function calculateTotal() {
         let productsTotal = 0;
         document.querySelectorAll('.product-row').forEach(row => {
+            const quantityInput = row.querySelector('input[name="product_quantity"]');
             const priceInput = row.querySelector('input[name="product_price"]');
-            if (priceInput && priceInput.value) { productsTotal += parseFloat(priceInput.value); }
+            
+            if (quantityInput && quantityInput.value && priceInput && priceInput.value) {
+                const quantity = parseInt(quantityInput.value) || 1;
+                const price = parseFloat(priceInput.value) || 0;
+                productsTotal += quantity * price;
+            }
         });
+        
         const shippingCost = parseFloat(shippingCostInput.value) || 0;
         const grandTotal = productsTotal + shippingCost;
-        totalDisplay.textContent = grandTotal.toFixed(2) + ' ج.س';
+        totalDisplay.textContent = formatCurrency(grandTotal) + ' ج.س';
     }
 
-    function addProductRow(desc = '', price = '') {
+    function addProductRow(name = '', quantity = 1, price = '') {
         const productRow = document.createElement('div');
-        productRow.className = 'row product-row mb-2 align-items-center';
-        productRow.innerHTML = `<div class="col-12 col-md-7 mb-2 mb-md-0"><input type="text" name="product_description" class="form-control" placeholder="وصف المنتج" value="${desc}" required></div><div class="col-7 col-md-3 mb-2 mb-md-0"><input type="number" name="product_price" class="form-control" placeholder="السعر (ج.س)" step="0.01" value="${price}" required></div><div class="col-5 col-md-2"><button type="button" class="btn btn-outline-danger w-100 remove-product">حذف</button></div>`;
+        productRow.className = 'row product-row mb-3 align-items-center';
+        productRow.innerHTML = `
+            <div class="col-12 col-md-4 mb-2 mb-md-0">
+                <input type="text" name="product_name" class="form-control" placeholder="اسم المنتج" value="${name}" required>
+            </div>
+            <div class="col-6 col-md-2 mb-2 mb-md-0">
+                <input type="number" name="product_quantity" class="form-control product-quantity" placeholder="الكمية" min="1" value="${quantity}" required>
+            </div>
+            <div class="col-6 col-md-3 mb-2 mb-md-0">
+                <input type="number" name="product_price" class="form-control product-price" placeholder="السعر (ج.س)" step="0.01" value="${price}" required>
+            </div>
+            <div class="col-12 col-md-2">
+                <button type="button" class="btn btn-outline-danger w-100 remove-product">
+                    <i class="bi bi-trash"></i> حذف
+                </button>
+            </div>
+        `;
         productsContainer.appendChild(productRow);
+        
+        // إضافة مستمعات الأحداث للحقول الجديدة
+        const quantityInput = productRow.querySelector('.product-quantity');
+        const priceInput = productRow.querySelector('.product-price');
+        
+        quantityInput.addEventListener('input', calculateTotal);
+        priceInput.addEventListener('input', calculateTotal);
     }
 
     addProductBtn.addEventListener('click', () => addProductRow());
-    productsContainer.addEventListener('click', function(e) { if (e.target && e.target.classList.contains('remove-product')) { e.target.closest('.product-row').remove(); calculateTotal(); }});
-    productsContainer.addEventListener('input', calculateTotal);
+    
+    productsContainer.addEventListener('click', function(e) {
+        if (e.target && (e.target.classList.contains('remove-product') || 
+                         e.target.parentElement.classList.contains('remove-product'))) {
+            const row = e.target.closest('.product-row');
+            row.remove();
+            calculateTotal();
+        }
+    });
+    
     shippingCostInput.addEventListener('input', calculateTotal);
     
-    if (productsContainer.children.length === 0) { addProductRow(); }
+    // تهيئة الحساب الأولي
+    if (productsContainer.children.length === 0) {
+        addProductRow();
+    }
     calculateTotal();
 });
 </script>
@@ -434,14 +605,48 @@ document.addEventListener('DOMContentLoaded', function() {
 {% block title %}الإحصائيات{% endblock %}
 {% block content %}
 <style>
-    .stat-card { text-align: center; padding: 20px; border-radius: 10px; color: white; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); transition: transform 0.2s; }
-    .stat-card:hover { transform: translateY(-5px); }
-    .stat-card h3 { font-size: 2.5rem; font-weight: bold; }
-    .stat-card p { font-size: 1.2rem; }
-    .bg-revenue { background: linear-gradient(45deg, #28a745, #218838); }
-    .bg-orders { background: linear-gradient(45deg, #17a2b8, #138496); }
-    .bg-completed { background: linear-gradient(45deg, #007bff, #0069d9); }
-    .bg-avg { background: linear-gradient(45deg, #fd7e14, #e36a02); }
+    .stat-card { 
+        text-align: center; 
+        padding: 25px; 
+        border-radius: 12px; 
+        color: white; 
+        margin-bottom: 20px; 
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+    }
+    
+    .stat-card:hover { 
+        transform: translateY(-5px); 
+        box-shadow: 0 8px 15px rgba(0,0,0,0.2); 
+    }
+    
+    .stat-card h3 { 
+        font-size: 2.5rem; 
+        font-weight: bold; 
+        margin-bottom: 10px;
+    }
+    
+    .stat-card p { 
+        font-size: 1.2rem; 
+        margin-bottom: 0;
+    }
+    
+    .bg-revenue { 
+        background: linear-gradient(45deg, #28a745, #218838); 
+    }
+    
+    .bg-orders { 
+        background: linear-gradient(45deg, #17a2b8, #138496); 
+    }
+    
+    .bg-completed { 
+        background: linear-gradient(45deg, #007bff, #0069d9); 
+    }
+    
+    .bg-avg { 
+        background: linear-gradient(45deg, #fd7e14, #e36a02); 
+    }
     
     @media (max-width: 768px) {
         .stat-card h3 { font-size: 2rem; }
@@ -450,10 +655,10 @@ document.addEventListener('DOMContentLoaded', function() {
 </style>
 <h2 class="mb-4">نظرة عامة على الأداء</h2>
 <div class="row">
-    <div class="col-md-6 col-lg-3"><div class="stat-card bg-revenue"><h3>{{ "%.0f"|format(stats.total_revenue) }}</h3><p>إجمالي الإيرادات (ج.س)</p></div></div>
+    <div class="col-md-6 col-lg-3"><div class="stat-card bg-revenue"><h3>{{ "{:,.0f}".format(stats.total_revenue) }}</h3><p>إجمالي الإيرادات (ج.س)</p></div></div>
     <div class="col-md-6 col-lg-3"><div class="stat-card bg-orders"><h3>{{ stats.total_orders }}</h3><p>إجمالي الطلبات</p></div></div>
     <div class="col-md-6 col-lg-3"><div class="stat-card bg-completed"><h3>{{ stats.completed_orders }}</h3><p>الطلبات المكتملة</p></div></div>
-    <div class="col-md-6 col-lg-3"><div class="stat-card bg-avg"><h3>{{ "%.0f"|format(stats.average_order_value) }}</h3><p>متوسط قيمة الطلب (ج.س)</p></div></div>
+    <div class="col-md-6 col-lg-3"><div class="stat-card bg-avg"><h3>{{ "{:,.0f}".format(stats.average_order_value) }}</h3><p>متوسط قيمة الطلب (ج.س)</p></div></div>
 </div>
 <div class="row mt-4">
     <div class="col-md-12"><div class="card"><div class="card-header"><h4>أكثر المدن طلباً</h4></div><div class="card-body">{% if stats.top_cities %}<ul class="list-group">{% for city, count in stats.top_cities %}<li class="list-group-item d-flex justify-content-between align-items-center">{{ city }}<span class="badge bg-primary rounded-pill">{{ count }} طلبات</span></li>{% endfor %}</ul>{% else %}<p class="text-muted">لا توجد بيانات كافية لعرضها.</p>{% endif %}</div></div></div>
@@ -542,6 +747,10 @@ document.addEventListener('DOMContentLoaded', function() {
             margin: 0 auto;
             padding: 25px;
             box-sizing: border-box;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
         }
         
         .header {
@@ -565,6 +774,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .invoice-info {
             flex: 1;
             text-align: left;
+            direction: ltr;
         }
         
         .invoice-info h1 {
@@ -588,10 +798,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         .bill-to, .payment-info {
             flex: 1;
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #eee;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
         }
         
         .bill-to h3, .payment-info h3 {
@@ -612,19 +822,23 @@ document.addEventListener('DOMContentLoaded', function() {
             width: 100%;
             border-collapse: collapse;
             margin: 25px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
         }
         
         .items-table th {
             background-color: #d63384;
             color: white;
-            padding: 12px 15px;
-            text-align: right;
+            padding: 15px;
+            text-align: center;
             font-weight: 600;
         }
         
         .items-table td {
-            padding: 12px 15px;
+            padding: 15px;
             border-bottom: 1px solid #ddd;
+            text-align: center;
         }
         
         .items-table tr:nth-child(even) {
@@ -652,10 +866,13 @@ document.addEventListener('DOMContentLoaded', function() {
             width: 50%;
             margin-left: 50%;
             border-collapse: collapse;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
         }
         
         .totals td {
-            padding: 10px 15px;
+            padding: 12px 15px;
             border-bottom: 1px solid #eee;
         }
         
@@ -673,6 +890,10 @@ document.addEventListener('DOMContentLoaded', function() {
             border-top: 1px solid #ddd;
             color: #777;
             font-size: 14px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
         }
         
         .thank-you {
@@ -689,6 +910,12 @@ document.addEventListener('DOMContentLoaded', function() {
             font-size: 24px;
         }
         
+        .currency {
+            font-family: 'Cairo', sans-serif;
+            direction: ltr;
+            display: inline-block;
+        }
+        
         /* تحسينات للطباعة */
         @media print {
             body {
@@ -698,6 +925,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .invoice-container {
                 padding: 0;
                 max-width: 100%;
+                box-shadow: none;
             }
             
             .header {
@@ -713,7 +941,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             .items-table th, .items-table td {
-                padding: 8px 10px;
+                padding: 10px 12px;
+            }
+            
+            .footer {
+                margin-top: 20px;
             }
         }
     </style>
@@ -751,17 +983,19 @@ document.addEventListener('DOMContentLoaded', function() {
         <table class="items-table">
             <thead>
                 <tr>
-                    <th class="text-right">وصف المنتج</th>
-                    <th class="text-center">الكمية</th>
-                    <th class="text-left">السعر (ج.س)</th>
+                    <th>اسم المنتج</th>
+                    <th>الكمية</th>
+                    <th>سعر الوحدة (ج.س)</th>
+                    <th>الإجمالي (ج.س)</th>
                 </tr>
             </thead>
             <tbody>
                 {% for product in order.products %}
                 <tr>
-                    <td class="text-right">{{ product.description }}</td>
-                    <td class="text-center">1</td>
-                    <td class="text-left">{{ "{:,.2f}".format(product.price) }}</td>
+                    <td>{{ product.description }}</td>
+                    <td>{{ product.quantity }}</td>
+                    <td><span class="currency">{{ "{:,.0f}".format(product.price) }}</span></td>
+                    <td><span class="currency">{{ "{:,.0f}".format(product.quantity * product.price) }}</span></td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -771,22 +1005,23 @@ document.addEventListener('DOMContentLoaded', function() {
             <table>
                 <tr>
                     <td class="text-right">مجموع المنتجات:</td>
-                    <td class="text-left">{{ "{:,.2f}".format(order.products_cost) }} ج.س</td>
+                    <td class="text-left"><span class="currency">{{ "{:,.0f}".format(order.products_cost) }}</span> ج.س</td>
                 </tr>
                 <tr>
                     <td class="text-right">تكلفة الشحن:</td>
-                    <td class="text-left">{{ "{:,.2f}".format(order.shipping_cost) }} ج.س</td>
+                    <td class="text-left"><span class="currency">{{ "{:,.0f}".format(order.shipping_cost) }}</span> ج.س</td>
                 </tr>
                 <tr>
                     <td class="text-right">الإجمالي:</td>
-                    <td class="text-left">{{ "{:,.2f}".format(order.total_cost) }} ج.س</td>
+                    <td class="text-left"><span class="currency">{{ "{:,.0f}".format(order.total_cost) }}</span> ج.س</td>
                 </tr>
             </table>
         </div>
-	<div class="footer">
+        
+        <div class="footer">
             <div class="thank-you">شكراً لتعاملكم معنا</div>
-            <p>Marvella Fashion </p>
-			<p>الهاتف : 00249960856096 </p>
+            <p>Marvella Fashion</p>
+            <p>الهاتف: 00249960856096</p>
         </div>
     </div>
 </body>
@@ -843,7 +1078,7 @@ class Order(db.Model):
     
     @property
     def products_cost(self):
-        return sum(p.price for p in self.products)
+        return sum(p.quantity * p.price for p in self.products)
     
     @property
     def total_cost(self):
@@ -852,6 +1087,7 @@ class Order(db.Model):
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.Text, nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
     price = db.Column(db.Float, nullable=False)
     order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
 
@@ -920,16 +1156,24 @@ def add_order():
             customer_name=form['customer_name'],
             customer_phone=form['customer_phone'],
             destination_city=form['destination_city'],
-            shipping_cost=float(form['shipping_cost'])
+            shipping_cost=float(form['shipping_cost']),
+            order_status=form['order_status'],
+            payment_status=form['payment_status']
         )
         db.session.add(new_order)
         
-        product_descriptions = form.getlist('product_description')
+        product_names = form.getlist('product_name')
+        product_quantities = form.getlist('product_quantity')
         product_prices = form.getlist('product_price')
         
-        for desc, price in zip(product_descriptions, product_prices):
-            if desc and price:
-                db.session.add(Product(description=desc, price=float(price), order=new_order))
+        for name, quantity, price in zip(product_names, product_quantities, product_prices):
+            if name and quantity and price:
+                db.session.add(Product(
+                    description=name, 
+                    quantity=int(quantity), 
+                    price=float(price), 
+                    order=new_order
+                ))
         
         db.session.commit()
         flash('تم إنشاء الطلب بنجاح!', 'success')
@@ -952,12 +1196,18 @@ def edit_order(order_id):
         for product in order_to_edit.products:
             db.session.delete(product)
         
-        product_descriptions = form.getlist('product_description')
+        product_names = form.getlist('product_name')
+        product_quantities = form.getlist('product_quantity')
         product_prices = form.getlist('product_price')
         
-        for desc, price in zip(product_descriptions, product_prices):
-            if desc and price:
-                db.session.add(Product(description=desc, price=float(price), order=order_to_edit))
+        for name, quantity, price in zip(product_names, product_quantities, product_prices):
+            if name and quantity and price:
+                db.session.add(Product(
+                    description=name, 
+                    quantity=int(quantity), 
+                    price=float(price), 
+                    order=order_to_edit
+                ))
         
         db.session.commit()
         flash('تم تحديث الطلب بنجاح!', 'success')
